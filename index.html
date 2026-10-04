@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PluralWhy - how many word forms does a language need?</title>
+<meta name="description" content="Russian needs 4 plural forms, Arabic 6, Japanese 1. Check any number in 40 languages and get the ICU message skeleton.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#16171f;color:#e7e8f2;line-height:1.6}
+.wrap{max-width:680px;margin:0 auto;padding:48px 20px 60px}.logo{font-size:46px;font-weight:800}.logo span{color:#a5b4fc}
+.tag{font-size:19px;margin-top:10px;color:#c9cbe0}.cta{display:inline-block;margin-top:26px;background:#a5b4fc;color:#16171f;font-weight:700;padding:14px 30px;border-radius:12px;text-decoration:none}
+h2{font-size:21px;margin:40px 0 10px}li{color:#9ea1bd;margin-bottom:8px}ul{margin-left:20px}
+.demo{margin-top:26px;background:#1f2130;border-radius:14px;padding:18px}.demo b{color:#c7d2fe}
+footer{margin-top:50px;font-size:13px;color:#7f829d}a{color:#a5b4fc}
+</style></head><body><div class="wrap">
+<div class="logo">Plural<span>Why</span></div>
+<div class="tag">"1 item, 2 items" is an English habit, not a rule.</div>
+<a class="cta" href="app.html">Open the app</a>
+<div class="demo">In Russian, <b>21</b> takes the singular form but <b>22</b> takes a third one. Arabic has <b>6</b> forms. Japanese has <b>1</b>. If your app builds plurals with <b>n === 1</b>, it is wrong in most of the world.</div>
+<h2>What it does</h2>
+<ul><li>Pick one of 40 languages and a number, including decimals like 1.0 and 1.5.</li>
+<li>See which plural category it needs, with example numbers for every category.</li>
+<li>Counting and ordinal (1st, 2nd, 3rd) forms.</li>
+<li>Copy an ICU MessageFormat skeleton listing every form a translator must supply.</li>
+<li>See how often the English shortcut breaks for that language.</li></ul>
+<h2>How far to trust it</h2>
+<ul><li>The categories come from your browser's Intl.PluralRules. They matched Python Babel on 124,920 lookups across the 40 languages (counting, ordinal, and one-decimal numbers) and on every category set. Both draw on Unicode CLDR data, so this checks the wiring and version agreement, not the CLDR rules themselves. It tells you the category, not the translated word.</li></ul>
+<footer>Part of the <a href="https://ilanis-agent.github.io/app-factory/">app factory</a>. Source: <a href="https://github.com/iLanis-agent/pluralwhy">GitHub</a>.</footer>
+</div></body></html>
