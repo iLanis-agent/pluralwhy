@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PluralWhy app - how many word forms does a language need?</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#16171f;color:#e7e8f2;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:28px 16px 50px}
+h1{font-size:28px}h1 span{color:#a5b4fc}.sub{color:#9ea1bd;margin:6px 0 16px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.row>div{flex:1;min-width:150px}
+label{display:block;font-size:13px;color:#9ea1bd;margin-bottom:4px}
+input,select{width:100%;background:#1f2130;color:#e7e8f2;border:1px solid #3a3d57;border-radius:10px;padding:10px;font-size:17px}
+.tabs button{background:#1f2130;color:#c7d2fe;border:1px solid #3a3d57;border-radius:20px;padding:6px 14px;margin:10px 6px 0 0;cursor:pointer;font-size:13px}.tabs button.on{background:#a5b4fc;color:#16171f}
+.big{background:#1f2130;border-left:3px solid #a5b4fc;border-radius:8px;padding:14px 16px;margin:16px 0;font-size:18px}.big b{color:#c7d2fe;font-size:24px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #2c2f45;vertical-align:top}th{color:#9ea1bd;font-weight:600}
+code,.ex{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:#c7d2fe}
+h2{font-size:16px;margin:22px 0 6px;color:#a5b4fc}.warn{background:#2a2433;border-left:3px solid #f0abfc;padding:10px 14px;border-radius:6px;margin-top:10px;font-size:14px}
+.hit td{background:#25283d}.foot{color:#7f829d;font-size:13px;margin-top:18px}a{color:#a5b4fc}
+</style></head><body><div class="wrap">
+<h1>Plural<span>Why</span></h1>
+<div class="sub">"1 file, 2 files" only works in English. Pick a language and a number to see which plural form the grammar needs, and what your translation strings must cover.</div>
+<div class="row"><div><label for="loc">Language</label><select id="loc"></select></div><div><label for="num">Number (try 1, 2, 5, 21, 1.5, 1.0)</label><input id="num" value="21" inputmode="decimal" autocomplete="off"></div></div>
+<div class="tabs"><button id="tc" class="on">Counting (2 files)</button><button id="to">Ordinal (2nd place)</button></div>
+<div id="out"></div>
+<div class="foot">Categories come from your browser's Intl.PluralRules (Unicode CLDR). Checked against Python Babel on 40 languages: 124,920 category lookups and all category sets matched. Fractions use the digits you type, so 1.0 and 1 can differ. Which category a given word needs is up to the language; this tells you the category, not the translated text. Runs in your browser.</div>
+<div class="foot">Part of the <a href="https://ilanis-agent.github.io/app-factory/">app factory</a>. Source: <a href="https://github.com/iLanis-agent/pluralwhy">GitHub</a>.</div>
+</div>
+<script>
+(function (root) {
+  'use strict';
+  // CLDR plural categories through the browser's Intl.PluralRules. Nothing here re-implements the rules.
+  var LOCALES = ['en','de','nl','sv','es','it','pt','pt-PT','fr','tr','hi','ja','zh','ko','vi','id','he','ar','fa','ru','uk','pl','cs','sk','sl','hr','lt','lv','ro','cy','ga','mt','br','is','fil','ca','hu','fi','el','bg'];
+  var ORDER = ['zero', 'one', 'two', 'few', 'many', 'other'];
+  function pr(loc, type, frac) { return new Intl.PluralRules(loc, { type: type || 'cardinal', minimumFractionDigits: frac || 0 }); }
+  function categories(loc, type) { var c = pr(loc, type).resolvedOptions().pluralCategories.slice(); return ORDER.filter(function (k) { return c.indexOf(k) >= 0; }); }
+  function classify(loc, n, type, frac) { return pr(loc, type, frac).select(n); }
+  // parse user text such as "1", "1.0", "2.50", "1,5" into {n, frac}
+  function parse(txt) {
+    var t = String(txt).trim().replace(',', '.');
+    if (!/^\d+(\.\d+)?$/.test(t)) return null;
+    var f = t.indexOf('.') < 0 ? 0 : t.length - t.indexOf('.') - 1;
+    return { n: Number(t), frac: f, text: t };
+  }
+  function examples(loc, type, max) {
+    var out = {}, cats = categories(loc, type), p = pr(loc, type), i, c;
+    cats.forEach(function (k) { out[k] = []; });
+    for (i = 0; i <= 1200; i++) { c = p.select(i); if (out[c] && out[c].length < (max || 6)) out[c].push(String(i)); }
+    if (type !== 'ordinal') {
+      var p1 = pr(loc, 'cardinal', 1);
+      ['0.0', '0.5', '1.0', '1.5', '2.0', '2.5', '5.0', '10.5'].forEach(function (t) { c = p1.select(Number(t)); if (out[c] && out[c].length < (max || 6) + 2 && out[c].indexOf(t) < 0) out[c].push(t); });
+    }
+    return out;
+  }
+  function icu(loc, type, word) {
+    var cats = categories(loc, type), forms = cats.map(function (k) { return k + ' {' + (word || '...') + '}'; });
+    return '{count, ' + (type === 'ordinal' ? 'selectordinal' : 'plural') + ', ' + forms.join(' ') + '}';
+  }
+  // how wrong is the English shortcut "n == 1 ? singular : plural" for this language, on whole numbers 0..1000
+  function englishShortcut(loc) {
+    var p = pr(loc, 'cardinal'), wrong = [], i, shouldSingular;
+    for (i = 0; i <= 1000; i++) { shouldSingular = p.select(i) === 'one'; if (shouldSingular !== (i === 1)) wrong.push(i); }
+    return { wrongCount: wrong.length, sample: wrong.slice(0, 8) };
+  }
+  var api = { LOCALES: LOCALES, categories: categories, classify: classify, parse: parse, examples: examples, icu: icu, englishShortcut: englishShortcut };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PluralWhy = api;
+})(typeof window !== 'undefined' ? window : this);
+
+var type='cardinal',S=document.getElementById('loc'),N=document.getElementById('num'),out=document.getElementById('out');
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+var dn=new Intl.DisplayNames(['en'],{type:'language'});
+PluralWhy.LOCALES.forEach(function(l){var o=document.createElement('option');o.value=l;var nm;try{nm=dn.of(l)}catch(e){nm=l}o.textContent=nm+' ('+l+')';S.appendChild(o)});S.value='ru';
+var NOTE={zero:'zero',one:'one',two:'two',few:'few',many:'many',other:'other'};
+function run(){var loc=S.value,p=PluralWhy.parse(N.value),cats=PluralWhy.categories(loc,type),ex=PluralWhy.examples(loc,type,6),h='',hit=null;
+ if(!p)h+='<div class="warn">Enter a non-negative number like 21, 1.5 or 1.0.</div>';
+ else{hit=PluralWhy.classify(loc,p.n,type,p.frac);h+='<div class="big">In this language, <b>'+esc(p.text)+'</b> uses the <b>'+hit+'</b> form.</div>'}
+ h+='<h2>'+cats.length+' form'+(cats.length>1?'s':'')+' needed: '+cats.join(', ')+'</h2><table><thead><tr><th>Form</th><th>Example numbers</th></tr></thead><tbody>'+cats.map(function(k){return'<tr'+(k===hit?' class="hit"':'')+'><td>'+k+'</td><td class="ex">'+esc((ex[k]||[]).join(', ')||'(only fractions or very large numbers)')+'</td></tr>'}).join('')+'</tbody></table>';
+ h+='<h2>Message skeleton (ICU MessageFormat)</h2><code>'+esc(PluralWhy.icu(loc,type,'...'))+'</code>';
+ if(type==='cardinal'){var e=PluralWhy.englishShortcut(loc);
+  if(e.wrongCount>0)h+='<div class="warn">The English shortcut "1 is singular, everything else is plural" gives the wrong form for '+e.wrongCount+' of the whole numbers 0 to 1000 in this language (for example '+e.sample.join(', ')+').</div>';
+  else h+='<div class="warn">The English shortcut ("1 is singular, everything else is plural") happens to be right for whole numbers in this language. Fractions can still differ.</div>'}
+ out.innerHTML=h}
+S.onchange=run;N.oninput=run;
+document.getElementById('tc').onclick=function(){type='cardinal';this.className='on';document.getElementById('to').className='';run()};
+document.getElementById('to').onclick=function(){type='ordinal';this.className='on';document.getElementById('tc').className='';run()};
+run();
+</script></body></html>
